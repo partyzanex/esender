@@ -1,0 +1,7 @@
+mysql:
+  dsn: "{{mysql.dsn}}"
+smtp:
+  host: "{{smtp.host}}"
+  port: {{smtp.port}}
+  user: "{{smtp.user}}"
+  password: "{{smtp.password}}"

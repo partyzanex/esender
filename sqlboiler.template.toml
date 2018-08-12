@@ -1,0 +1,12 @@
+blacklist=["mig_migrations"]
+
+pkgname="models"
+output="models"
+
+[mysql]
+  dbname="exapmle_db"
+  host="localhost"
+  port=3306
+  user="root"
+  pass=""
+  sslmode="false"
