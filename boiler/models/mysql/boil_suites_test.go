@@ -119,7 +119,3 @@ func TestUpdate(t *testing.T) {
 func TestSliceUpdateAll(t *testing.T) {
 	t.Run("Emails", testEmailsSliceUpdateAll)
 }
-
-func TestUpsert(t *testing.T) {
-	t.Run("Emails", testEmailsUpsert)
-}

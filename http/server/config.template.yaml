@@ -1,0 +1,19 @@
+http:
+  host: "{{http.host}}"
+  port: {{http.port}}
+  auth_key: "{{http.auth_key}}"
+storage:
+  name: ""
+  dsn: "{{mysql.dsn}}"
+senders:
+  - name: "" # ex. smtp
+    host: ""
+    port:
+    tls: # ex. true|false
+    username: ""
+    password: ""
+    interval: "" # ex. 10s
+    pause: "" # ex. 1s
+    limit: "" # ex. 10
+    status: "" # ex. created|error|sent
+    default: # ex. true|false

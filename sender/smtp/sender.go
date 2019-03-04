@@ -1,4 +1,4 @@
-package services
+package smtp
 
 import (
 	"crypto/tls"
@@ -10,31 +10,38 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SMTPConfig struct {
+type Config struct {
+	domain.AgentConfig
+
 	Host               string
 	Port               uint16
 	UserName, Password string
+	TLS                bool
 }
 
-func (config SMTPConfig) Address() string {
+func (config Config) Address() string {
 	return config.Host + ":" + strconv.FormatInt(int64(config.Port), 10)
 }
 
-type SMTPSender struct {
-	config SMTPConfig
+type Sender struct {
+	config Config
 	auth   smtp.Auth
 }
 
-func (sender *SMTPSender) Send(email *domain.Email) error {
+func (Sender) Name() string {
+	return "smtp"
+}
+
+func (sender *Sender) Send(email domain.Email) error {
 	if err := email.Validate(); err != nil {
-		return errors.Wrap(err, "email validation failed")
+		return errors.Wrap(err, domain.EmailValidationErr)
 	}
 
 	auth := smtp.PlainAuth("", sender.config.UserName, sender.config.Password, sender.config.Host)
 
 	// TLS config
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: sender.config.TLS,
 		ServerName:         sender.config.Host,
 	}
 
@@ -53,9 +60,9 @@ func (sender *SMTPSender) Send(email *domain.Email) error {
 		return errors.Wrap(err, "auth failed")
 	}
 
-	for _, to := range email.To {
+	for _, to := range email.Recipients {
 		headers := make(map[string]string)
-		headers["From"] = email.From
+		headers["From"] = email.Sender
 		headers["To"] = to
 		headers["Subject"] = email.Subject
 
@@ -64,8 +71,14 @@ func (sender *SMTPSender) Send(email *domain.Email) error {
 			message += fmt.Sprintf("%s: %s\r\n", key, value)
 		}
 
-		message += email.GetMimeType()
-		message += "\r\n" + string(email.GetBody())
+		message += email.MimeType.Header()
+
+		body, err := email.GetBody()
+		if err != nil {
+			return errors.Wrap(err, domain.GetEmailBodyErr)
+		}
+
+		message += "\r\n" + string(body)
 
 		if err = client.Mail(headers["From"]); err != nil {
 			return errors.Wrap(err, "set sender failed")
@@ -96,8 +109,17 @@ func (sender *SMTPSender) Send(email *domain.Email) error {
 	return nil
 }
 
-func NewSMTPSender(config SMTPConfig) *SMTPSender {
-	return &SMTPSender{
+func (sender *Sender) AgentConfig() domain.AgentConfig {
+	return domain.AgentConfig{
+		Interval: sender.config.Interval,
+		Pause:    sender.config.Interval,
+		Limit:    sender.config.Limit,
+		Status:   sender.config.Status,
+	}
+}
+
+func New(config Config) *Sender {
+	return &Sender{
 		config: config,
 		auth:   smtp.PlainAuth("", config.UserName, config.Password, config.Host),
 	}

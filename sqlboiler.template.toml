@@ -1,7 +1,5 @@
-blacklist=["mig_migrations"]
-
-pkgname="models"
-output="models"
+pkgname="mysql"
+output="./boiler/models/mysql"
 
 [mysql]
   dbname="exapmle_db"
@@ -10,3 +8,5 @@ output="models"
   user="root"
   pass=""
   sslmode="false"
+  blacklist=["mig_migrations"]
+  whitelist=["email"]

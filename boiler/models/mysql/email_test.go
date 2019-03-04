@@ -5,44 +5,56 @@ package mysql
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/volatiletech/sqlboiler/boil"
+	"github.com/volatiletech/sqlboiler/queries"
 	"github.com/volatiletech/sqlboiler/randomize"
 	"github.com/volatiletech/sqlboiler/strmangle"
+)
+
+var (
+	// Relationships sometimes use the reflection helper queries.Equal/queries.Assign
+	// so force a package dependency in case they don't.
+	_ = queries.Equal
 )
 
 func testEmails(t *testing.T) {
 	t.Parallel()
 
-	query := Emails(nil)
+	query := Emails()
 
 	if query.Query == nil {
 		t.Error("expected a query, got nothing")
 	}
 }
+
 func testEmailsDelete(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	if err = email.Delete(tx); err != nil {
+	if rowsAff, err := o.Delete(ctx, tx); err != nil {
 		t.Error(err)
+	} else if rowsAff != 1 {
+		t.Error("should only have deleted one row, but affected:", rowsAff)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,22 +69,25 @@ func testEmailsQueryDeleteAll(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	if err = Emails(tx).DeleteAll(); err != nil {
+	if rowsAff, err := Emails().DeleteAll(ctx, tx); err != nil {
 		t.Error(err)
+	} else if rowsAff != 1 {
+		t.Error("should only have deleted one row, but affected:", rowsAff)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -87,24 +102,27 @@ func testEmailsSliceDeleteAll(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	slice := EmailSlice{email}
+	slice := EmailSlice{o}
 
-	if err = slice.DeleteAll(tx); err != nil {
+	if rowsAff, err := slice.DeleteAll(ctx, tx); err != nil {
 		t.Error(err)
+	} else if rowsAff != 1 {
+		t.Error("should only have deleted one row, but affected:", rowsAff)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,47 +131,51 @@ func testEmailsSliceDeleteAll(t *testing.T) {
 		t.Error("want zero records, got:", count)
 	}
 }
+
 func testEmailsExists(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	e, err := EmailExists(tx, email.ID)
+	e, err := EmailExists(ctx, tx, o.ID)
 	if err != nil {
 		t.Errorf("Unable to check if Email exists: %s", err)
 	}
 	if !e {
-		t.Errorf("Expected EmailExistsG to return true, but got false.")
+		t.Errorf("Expected EmailExists to return true, but got false.")
 	}
 }
+
 func testEmailsFind(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	emailFound, err := FindEmail(tx, email.ID)
+	emailFound, err := FindEmail(ctx, tx, o.ID)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,23 +184,25 @@ func testEmailsFind(t *testing.T) {
 		t.Error("want a record, got nil")
 	}
 }
+
 func testEmailsBind(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	if err = Emails(tx).Bind(email); err != nil {
+	if err = Emails().Bind(ctx, tx, o); err != nil {
 		t.Error(err)
 	}
 }
@@ -188,18 +212,19 @@ func testEmailsOne(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	if x, err := Emails(tx).One(); err != nil {
+	if x, err := Emails().One(ctx, tx); err != nil {
 		t.Error(err)
 	} else if x == nil {
 		t.Error("expected to get a non nil record")
@@ -220,16 +245,17 @@ func testEmailsAll(t *testing.T) {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = emailOne.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = emailOne.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
-	if err = emailTwo.Insert(tx); err != nil {
+	if err = emailTwo.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	slice, err := Emails(tx).All()
+	slice, err := Emails().All(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -253,16 +279,17 @@ func testEmailsCount(t *testing.T) {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = emailOne.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = emailOne.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
-	if err = emailTwo.Insert(tx); err != nil {
+	if err = emailTwo.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -271,47 +298,48 @@ func testEmailsCount(t *testing.T) {
 		t.Error("want 2 records, got:", count)
 	}
 }
-func emailBeforeInsertHook(e boil.Executor, o *Email) error {
+
+func emailBeforeInsertHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailAfterInsertHook(e boil.Executor, o *Email) error {
+func emailAfterInsertHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailAfterSelectHook(e boil.Executor, o *Email) error {
+func emailAfterSelectHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailBeforeUpdateHook(e boil.Executor, o *Email) error {
+func emailBeforeUpdateHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailAfterUpdateHook(e boil.Executor, o *Email) error {
+func emailAfterUpdateHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailBeforeDeleteHook(e boil.Executor, o *Email) error {
+func emailBeforeDeleteHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailAfterDeleteHook(e boil.Executor, o *Email) error {
+func emailAfterDeleteHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailBeforeUpsertHook(e boil.Executor, o *Email) error {
+func emailBeforeUpsertHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
 
-func emailAfterUpsertHook(e boil.Executor, o *Email) error {
+func emailAfterUpsertHook(ctx context.Context, e boil.ContextExecutor, o *Email) error {
 	*o = Email{}
 	return nil
 }
@@ -321,6 +349,7 @@ func testEmailsHooks(t *testing.T) {
 
 	var err error
 
+	ctx := context.Background()
 	empty := &Email{}
 	o := &Email{}
 
@@ -330,7 +359,7 @@ func testEmailsHooks(t *testing.T) {
 	}
 
 	AddEmailHook(boil.BeforeInsertHook, emailBeforeInsertHook)
-	if err = o.doBeforeInsertHooks(nil); err != nil {
+	if err = o.doBeforeInsertHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doBeforeInsertHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -339,7 +368,7 @@ func testEmailsHooks(t *testing.T) {
 	emailBeforeInsertHooks = []EmailHook{}
 
 	AddEmailHook(boil.AfterInsertHook, emailAfterInsertHook)
-	if err = o.doAfterInsertHooks(nil); err != nil {
+	if err = o.doAfterInsertHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doAfterInsertHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -348,7 +377,7 @@ func testEmailsHooks(t *testing.T) {
 	emailAfterInsertHooks = []EmailHook{}
 
 	AddEmailHook(boil.AfterSelectHook, emailAfterSelectHook)
-	if err = o.doAfterSelectHooks(nil); err != nil {
+	if err = o.doAfterSelectHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doAfterSelectHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -357,7 +386,7 @@ func testEmailsHooks(t *testing.T) {
 	emailAfterSelectHooks = []EmailHook{}
 
 	AddEmailHook(boil.BeforeUpdateHook, emailBeforeUpdateHook)
-	if err = o.doBeforeUpdateHooks(nil); err != nil {
+	if err = o.doBeforeUpdateHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doBeforeUpdateHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -366,7 +395,7 @@ func testEmailsHooks(t *testing.T) {
 	emailBeforeUpdateHooks = []EmailHook{}
 
 	AddEmailHook(boil.AfterUpdateHook, emailAfterUpdateHook)
-	if err = o.doAfterUpdateHooks(nil); err != nil {
+	if err = o.doAfterUpdateHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doAfterUpdateHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -375,7 +404,7 @@ func testEmailsHooks(t *testing.T) {
 	emailAfterUpdateHooks = []EmailHook{}
 
 	AddEmailHook(boil.BeforeDeleteHook, emailBeforeDeleteHook)
-	if err = o.doBeforeDeleteHooks(nil); err != nil {
+	if err = o.doBeforeDeleteHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doBeforeDeleteHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -384,7 +413,7 @@ func testEmailsHooks(t *testing.T) {
 	emailBeforeDeleteHooks = []EmailHook{}
 
 	AddEmailHook(boil.AfterDeleteHook, emailAfterDeleteHook)
-	if err = o.doAfterDeleteHooks(nil); err != nil {
+	if err = o.doAfterDeleteHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doAfterDeleteHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -393,7 +422,7 @@ func testEmailsHooks(t *testing.T) {
 	emailAfterDeleteHooks = []EmailHook{}
 
 	AddEmailHook(boil.BeforeUpsertHook, emailBeforeUpsertHook)
-	if err = o.doBeforeUpsertHooks(nil); err != nil {
+	if err = o.doBeforeUpsertHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doBeforeUpsertHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -402,7 +431,7 @@ func testEmailsHooks(t *testing.T) {
 	emailBeforeUpsertHooks = []EmailHook{}
 
 	AddEmailHook(boil.AfterUpsertHook, emailAfterUpsertHook)
-	if err = o.doAfterUpsertHooks(nil); err != nil {
+	if err = o.doAfterUpsertHooks(ctx, nil); err != nil {
 		t.Errorf("Unable to execute doAfterUpsertHooks: %s", err)
 	}
 	if !reflect.DeepEqual(o, empty) {
@@ -410,23 +439,25 @@ func testEmailsHooks(t *testing.T) {
 	}
 	emailAfterUpsertHooks = []EmailHook{}
 }
+
 func testEmailsInsert(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -441,18 +472,19 @@ func testEmailsInsertWhitelist(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx, emailColumnsWithoutDefault...); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Whitelist(emailColumnsWithoutDefault...)); err != nil {
 		t.Error(err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -467,18 +499,19 @@ func testEmailsReload(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	if err = email.Reload(tx); err != nil {
+	if err = o.Reload(ctx, tx); err != nil {
 		t.Error(err)
 	}
 }
@@ -488,40 +521,43 @@ func testEmailsReloadAll(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	slice := EmailSlice{email}
+	slice := EmailSlice{o}
 
-	if err = slice.ReloadAll(tx); err != nil {
+	if err = slice.ReloadAll(ctx, tx); err != nil {
 		t.Error(err)
 	}
 }
+
 func testEmailsSelect(t *testing.T) {
 	t.Parallel()
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	slice, err := Emails(tx).All()
+	slice, err := Emails().All(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -532,31 +568,35 @@ func testEmailsSelect(t *testing.T) {
 }
 
 var (
-	emailDBTypes = map[string]string{`DTCreated`: `int`, `DTSent`: `int`, `DTUpdated`: `int`, `Error`: `varchar`, `From`: `varchar`, `ID`: `int`, `MimeType`: `varchar`, `Status`: `enum('created','sent','error')`, `Text`: `text`, `Title`: `varchar`, `To`: `varchar`}
+	emailDBTypes = map[string]string{`ID`: `int`, `Recipients`: `text`, `CC`: `text`, `BCC`: `text`, `Sender`: `varchar`, `Subject`: `varchar`, `MimeType`: `enum('html','text')`, `Body`: `longtext`, `Status`: `enum('created','sent','error')`, `Error`: `varchar`, `DTCreated`: `datetime`, `DTUpdated`: `datetime`, `DTSent`: `datetime`}
 	_            = bytes.MinRead
 )
 
 func testEmailsUpdate(t *testing.T) {
 	t.Parallel()
 
+	if 0 == len(emailPrimaryKeyColumns) {
+		t.Skip("Skipping table with no primary key columns")
+	}
 	if len(emailColumns) == len(emailPrimaryKeyColumns) {
 		t.Skip("Skipping table with only primary key columns")
 	}
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -565,12 +605,14 @@ func testEmailsUpdate(t *testing.T) {
 		t.Error("want one record, got:", count)
 	}
 
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailPrimaryKeyColumns...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	if err = email.Update(tx); err != nil {
+	if rowsAff, err := o.Update(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
+	} else if rowsAff != 1 {
+		t.Error("should only affect one row but affected", rowsAff)
 	}
 }
 
@@ -583,18 +625,19 @@ func testEmailsSliceUpdateAll(t *testing.T) {
 
 	seed := randomize.NewSeed()
 	var err error
-	email := &Email{}
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
+	o := &Email{}
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Insert(tx); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Error(err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -603,7 +646,7 @@ func testEmailsSliceUpdateAll(t *testing.T) {
 		t.Error("want one record, got:", count)
 	}
 
-	if err = randomize.Struct(seed, email, emailDBTypes, true, emailPrimaryKeyColumns...); err != nil {
+	if err = randomize.Struct(seed, o, emailDBTypes, true, emailPrimaryKeyColumns...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
@@ -618,39 +661,54 @@ func testEmailsSliceUpdateAll(t *testing.T) {
 		)
 	}
 
-	value := reflect.Indirect(reflect.ValueOf(email))
+	value := reflect.Indirect(reflect.ValueOf(o))
+	typ := reflect.TypeOf(o).Elem()
+	n := typ.NumField()
+
 	updateMap := M{}
 	for _, col := range fields {
-		updateMap[col] = value.FieldByName(strmangle.TitleCase(col)).Interface()
+		for i := 0; i < n; i++ {
+			f := typ.Field(i)
+			if f.Tag.Get("boil") == col {
+				updateMap[col] = value.Field(i).Interface()
+			}
+		}
 	}
 
-	slice := EmailSlice{email}
-	if err = slice.UpdateAll(tx, updateMap); err != nil {
+	slice := EmailSlice{o}
+	if rowsAff, err := slice.UpdateAll(ctx, tx, updateMap); err != nil {
 		t.Error(err)
+	} else if rowsAff != 1 {
+		t.Error("wanted one record updated but got", rowsAff)
 	}
 }
+
 func testEmailsUpsert(t *testing.T) {
 	t.Parallel()
 
 	if len(emailColumns) == len(emailPrimaryKeyColumns) {
 		t.Skip("Skipping table with only primary key columns")
 	}
+	if len(mySQLEmailUniqueColumns) == 0 {
+		t.Skip("Skipping table with no unique columns to conflict on")
+	}
 
 	seed := randomize.NewSeed()
 	var err error
 	// Attempt the INSERT side of an UPSERT
-	email := Email{}
-	if err = randomize.Struct(seed, &email, emailDBTypes, true); err != nil {
+	o := Email{}
+	if err = randomize.Struct(seed, &o, emailDBTypes, false); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	tx := MustTx(boil.Begin())
-	defer tx.Rollback()
-	if err = email.Upsert(tx, nil); err != nil {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+	if err = o.Upsert(ctx, tx, boil.Infer(), boil.Infer()); err != nil {
 		t.Errorf("Unable to upsert Email: %s", err)
 	}
 
-	count, err := Emails(tx).Count()
+	count, err := Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -659,15 +717,15 @@ func testEmailsUpsert(t *testing.T) {
 	}
 
 	// Attempt the UPDATE side of an UPSERT
-	if err = randomize.Struct(seed, &email, emailDBTypes, false, emailPrimaryKeyColumns...); err != nil {
+	if err = randomize.Struct(seed, &o, emailDBTypes, false, emailPrimaryKeyColumns...); err != nil {
 		t.Errorf("Unable to randomize Email struct: %s", err)
 	}
 
-	if err = email.Upsert(tx, nil); err != nil {
+	if err = o.Upsert(ctx, tx, boil.Infer(), boil.Infer()); err != nil {
 		t.Errorf("Unable to upsert Email: %s", err)
 	}
 
-	count, err = Emails(tx).Count()
+	count, err = Emails().Count(ctx, tx)
 	if err != nil {
 		t.Error(err)
 	}
