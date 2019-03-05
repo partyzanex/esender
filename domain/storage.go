@@ -9,6 +9,8 @@ const (
 	DateCreated TimeRangeProp = "created"
 	DateUpdated TimeRangeProp = "updated"
 	DateSent    TimeRangeProp = "sent"
+
+	DateTimeLayout = "2006-01-02 15:45:06"
 )
 
 type TimeRangeProp string

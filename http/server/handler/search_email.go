@@ -10,10 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	dateTimeLayout = "2006-01-02 15:45:06"
-)
-
 func (h *Handler) SearchEmail(ctx echo.Context) error {
 	filter := &domain.Filter{
 		Status:    domain.EmailStatus(ctx.QueryParam("status")),
@@ -44,7 +40,7 @@ func (h *Handler) SearchEmail(ctx echo.Context) error {
 	}
 
 	if dt := ctx.QueryParam("since"); dt != "" {
-		since, err := time.Parse(dateTimeLayout, dt)
+		since, err := time.Parse(domain.DateTimeLayout, dt)
 		if err != nil {
 			return h.errorResponse(ctx, errors.Wrap(err, BadQueryParamErr))
 		}
@@ -53,7 +49,7 @@ func (h *Handler) SearchEmail(ctx echo.Context) error {
 	}
 
 	if dt := ctx.QueryParam("till"); dt != "" {
-		till, err := time.Parse(dateTimeLayout, dt)
+		till, err := time.Parse(domain.DateTimeLayout, dt)
 		if err != nil {
 			return h.errorResponse(ctx, errors.Wrap(err, BadQueryParamErr))
 		}

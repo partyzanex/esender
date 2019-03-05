@@ -16,7 +16,6 @@ func (h *Handler) CreateEmail(ctx echo.Context) error {
 	}
 
 	result, err := h.Storage.Create(ctx.Request().Context(), email)
-
 	if err != nil {
 		return h.errorResponse(ctx, errors.Wrap(err, "creating email failed"))
 	}
