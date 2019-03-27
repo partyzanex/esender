@@ -62,8 +62,8 @@ func (sender *Sender) Send(email domain.Email) error {
 
 	for _, to := range email.Recipients {
 		headers := make(map[string]string)
-		headers["From"] = email.Sender
-		headers["To"] = to
+		headers["From"] = email.Sender.String()
+		headers["To"] = to.String()
 		headers["Subject"] = email.Subject
 
 		message := ""
@@ -72,19 +72,13 @@ func (sender *Sender) Send(email domain.Email) error {
 		}
 
 		message += email.MimeType.Header()
+		message += "\r\n" + email.Body
 
-		body, err := email.GetBody()
-		if err != nil {
-			return errors.Wrap(err, domain.GetEmailBodyErr)
-		}
-
-		message += "\r\n" + string(body)
-
-		if err = client.Mail(headers["From"]); err != nil {
+		if err = client.Mail(email.Sender.Address); err != nil {
 			return errors.Wrap(err, "set sender failed")
 		}
 
-		if err = client.Rcpt(to); err != nil {
+		if err = client.Rcpt(to.Address); err != nil {
 			return errors.Wrap(err, "set recipient failed")
 		}
 

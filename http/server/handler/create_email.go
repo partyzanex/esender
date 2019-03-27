@@ -20,5 +20,7 @@ func (h *Handler) CreateEmail(ctx echo.Context) error {
 		return h.errorResponse(ctx, errors.Wrap(err, "creating email failed"))
 	}
 
-	return ctx.JSON(http.StatusOK, result)
+	return ctx.JSON(http.StatusOK, &Response{
+		Data: result,
+	})
 }

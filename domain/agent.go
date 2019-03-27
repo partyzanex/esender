@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"sync"
 	"log"
 	"time"
 
@@ -35,38 +34,34 @@ func (agent *agent) Process() error {
 		return err
 	}
 
-	wg := &sync.WaitGroup{}
-
 	for _, email := range emails {
-		wg.Add(1)
-		go func(email Email) {
-			err := agent.sender.Send(email)
-			if err != nil {
-				agent.log(errors.Wrap(err, "sending email failed"))
-				email.Status = StatusError
-				errMsg := err.Error()
-				email.Error = &errMsg
-			} else {
-				DTSent := time.Now()
-				email.DTSent = &DTSent
-				email.Status = StatusSent
-			}
+		err := agent.sender.Send(*email)
+		if err != nil {
+			agent.log(errors.Wrap(err, "sending email failed"))
+			email.Status = StatusError
+			errMsg := err.Error()
+			email.Error = &errMsg
+		} else {
+			DTSent := time.Now()
+			email.DTSent = &DTSent
+			email.Status = StatusSent
+		}
 
-			_, err = agent.storage.Update(context.Background(), email)
-			if err != nil {
-				agent.log(errors.Wrap(err, "updating email failed"))
-			}
-		}(*email)
+		_, err = agent.storage.Update(context.Background(), *email)
+		if err != nil {
+			agent.log(errors.Wrap(err, "updating email failed"))
+		}
 	}
-
-	wg.Wait()
 
 	return nil
 }
 
 func (agent *agent) Run() {
 	for range agent.interval.C {
-		agent.Process()
+		err := agent.Process()
+		if err != nil {
+			agent.log(err)
+		}
 	}
 }
 
@@ -75,7 +70,7 @@ func (agent *agent) Stop() {
 }
 
 func (agent) log(err error) {
-	log.Println(err)
+	log.Println("Agent error:", err)
 	raven.CaptureError(err, nil)
 }
 

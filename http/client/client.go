@@ -1,13 +1,15 @@
 package client
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
-	"gopkg.in/resty.v1"
-	"github.com/pkg/errors"
 	"github.com/partyzanex/esender/domain"
+	"github.com/pkg/errors"
+	"gopkg.in/resty.v1"
+	"strconv"
 )
 
 const (
@@ -22,6 +24,15 @@ type result struct {
 	Error *string       `json:"error,omitempty"`
 }
 
+func (res result) error() string {
+	respErr := ""
+	if res.Error != nil {
+		respErr = *res.Error
+	}
+
+	return respErr
+}
+
 type Client struct {
 	client *resty.Client
 
@@ -33,39 +44,56 @@ func (c Client) url(path string) string {
 }
 
 func (c *Client) CreateEmail(email domain.Email) (*domain.Email, error) {
-	result := &result{}
-
 	resp, err := c.client.R().
 		SetBody(email).
-		SetResult(result).
 		Post(c.url(emailPath))
 	if err != nil {
 		return nil, errors.Wrap(err, "creating email failed")
 	}
 
+	result, err := c.bindResult(resp.Body())
+	if err != nil {
+		return nil, err
+	}
+
 	if code := resp.StatusCode(); code != http.StatusOK {
 		return nil, errors.New(
-			fmt.Sprintf(requestErrTpl, code, *result.Error),
+			fmt.Sprintf(requestErrTpl, code, result.error()),
 		)
 	}
 
 	return result.Data, nil
 }
 
-func (c *Client) UpdateEmail(email domain.Email) (*domain.Email, error) {
+func (Client) bindResult(body []byte) (*result, error) {
 	result := &result{}
 
+	dec := json.NewDecoder(bytes.NewReader(body))
+
+	err := dec.Decode(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "decoding json failed")
+	}
+
+	return result, nil
+}
+
+func (c *Client) UpdateEmail(email domain.Email) (*domain.Email, error) {
 	resp, err := c.client.R().
 		SetBody(email).
-		SetResult(result).
 		Put(c.url(emailPath))
 	if err != nil {
 		return nil, errors.Wrap(err, "updating email failed")
 	}
 
+	result, err := c.bindResult(resp.Body())
+	if err != nil {
+		return nil, err
+	}
+
 	if code := resp.StatusCode(); code != http.StatusOK {
 		return nil, errors.New(
-			fmt.Sprintf(requestErrTpl, code, *result.Error),
+			fmt.Sprintf(requestErrTpl, code, result.error()),
 		)
 	}
 
@@ -73,19 +101,21 @@ func (c *Client) UpdateEmail(email domain.Email) (*domain.Email, error) {
 }
 
 func (c *Client) SendEmail(email domain.Email) (*domain.Email, error) {
-	result := &result{}
-
 	resp, err := c.client.R().
 		SetBody(email).
-		SetResult(result).
 		Post(c.url(sendEmailPath))
 	if err != nil {
 		return nil, errors.Wrap(err, "sending email failed")
 	}
 
+	result, err := c.bindResult(resp.Body())
+	if err != nil {
+		return nil, err
+	}
+
 	if code := resp.StatusCode(); code != http.StatusOK {
 		return nil, errors.New(
-			fmt.Sprintf(requestErrTpl, code, *result.Error),
+			fmt.Sprintf(requestErrTpl, code, result.error()),
 		)
 	}
 
@@ -93,18 +123,20 @@ func (c *Client) SendEmail(email domain.Email) (*domain.Email, error) {
 }
 
 func (c *Client) GetEmail(id int64) (*domain.Email, error) {
-	result := &result{}
-
 	resp, err := c.client.R().
-		SetResult(result).
 		Get(c.url(emailPath) + fmt.Sprintf("/%d", id))
 	if err != nil {
 		return nil, errors.Wrap(err, "getting email failed")
 	}
 
+	result, err := c.bindResult(resp.Body())
+	if err != nil {
+		return nil, err
+	}
+
 	if code := resp.StatusCode(); code != http.StatusOK {
 		return nil, errors.New(
-			fmt.Sprintf(requestErrTpl, code, *result.Error),
+			fmt.Sprintf(requestErrTpl, code, result.error()),
 		)
 	}
 
@@ -112,13 +144,7 @@ func (c *Client) GetEmail(id int64) (*domain.Email, error) {
 }
 
 func (c *Client) SearchEmails(filter *domain.Filter) ([]*domain.Email, error) {
-	result := &struct {
-		Data  []*domain.Email `json:"data,omitempty"`
-		Error *string         `json:"error,omitempty"`
-	}{}
-
-	request := c.client.R().
-		SetResult(result)
+	request := c.client.R()
 
 	if filter != nil {
 		if filter.Recipient != "" {
@@ -149,9 +175,21 @@ func (c *Client) SearchEmails(filter *domain.Filter) ([]*domain.Email, error) {
 		return nil, errors.Wrap(err, "search for emails failed")
 	}
 
+	result := &struct {
+		Data  []*domain.Email `json:"data,omitempty"`
+		Error *string         `json:"error,omitempty"`
+	}{}
+
+	dec := json.NewDecoder(bytes.NewReader(resp.Body()))
+
+	err = dec.Decode(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "decoding json failed")
+	}
+
 	if code := resp.StatusCode(); code != http.StatusOK {
 		return nil, errors.New(
-			fmt.Sprintf(requestErrTpl, code, *result.Error),
+			fmt.Sprintf(requestErrTpl, code, result.Error),
 		)
 	}
 
@@ -159,8 +197,12 @@ func (c *Client) SearchEmails(filter *domain.Filter) ([]*domain.Email, error) {
 }
 
 func New(baseURL, user, pass string) *Client {
+	client := resty.New().
+		SetBasicAuth(user, pass).
+		SetHeader("Content-Type", "application/json")
+
 	return &Client{
 		BaseURL: baseURL,
-		client:  resty.New().SetBasicAuth(user, pass),
+		client:  client,
 	}
 }

@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"github.com/labstack/echo"
-	"github.com/pkg/errors"
-	"github.com/partyzanex/esender/domain"
 	"net/http"
+
+	"github.com/labstack/echo"
+	"github.com/partyzanex/esender/domain"
+	"github.com/pkg/errors"
 )
 
 func (h *Handler) UpdateEmail(ctx echo.Context) error {

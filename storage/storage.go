@@ -2,12 +2,13 @@ package storage
 
 import (
 	"database/sql"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/partyzanex/esender/domain"
-	"github.com/pkg/errors"
 	"github.com/partyzanex/esender/storage/mysql"
+	"github.com/pkg/errors"
 )
 
 type Config struct {
@@ -22,6 +23,7 @@ func Create(config Config) (domain.EmailStorage, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "opening sql connection failed")
 		}
+		db.SetConnMaxLifetime(time.Second)
 
 		return mysql.EmailStorage(db), nil
 	default:

@@ -6,7 +6,7 @@ HTTP (REST) and GRPC microservices for sending emails written on Go.
 
 ```bash
 # up
-cd ./migrarions/mysql
+cd ./boiler/migrations/mysql
 goose mysql "user:password@/database" up
 # 2019/03/01 23:22:36 OK    00001_init.sql
 

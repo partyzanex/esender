@@ -2,6 +2,8 @@ http:
   host: "{{http.host}}"
   port: {{http.port}}
   auth_key: "{{http.auth_key}}"
+sentry:
+  dsn: "{{sentry.dsn}}"
 storage:
   name: ""
   dsn: "{{mysql.dsn}}"

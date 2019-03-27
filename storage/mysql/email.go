@@ -29,7 +29,7 @@ func (storage *emailStorage) Search(ctx context.Context, filter *domain.Filter) 
 
 	if filter != nil {
 		if filter.Recipient != "" {
-			expr := "%"+filter.Recipient+"%"
+			expr := "%" + filter.Recipient + "%"
 			clause := "recipients like ? or cc like ? or bcc like ?"
 			mods = append(mods, qm.Where(clause, expr, expr, expr))
 		}
@@ -107,10 +107,10 @@ func (storage *emailStorage) Create(ctx context.Context, email domain.Email) (*d
 	}
 
 	model := &mysql.Email{
-		Recipients: strings.Join(email.Recipients, AddressSeparator),
-		CC:         strings.Join(email.CC, AddressSeparator),
-		BCC:        strings.Join(email.BCC, AddressSeparator),
-		Sender:     email.Sender,
+		Recipients: addressToString(email.Recipients...),
+		CC:         addressToString(email.CC...),
+		BCC:        addressToString(email.BCC...),
+		Sender:     email.Sender.String(),
 		Body:       base64.StdEncoding.EncodeToString([]byte(email.Body)),
 		Subject:    email.Subject,
 		MimeType:   email.MimeType.String(),
@@ -140,10 +140,10 @@ func (storage *emailStorage) Update(ctx context.Context, email domain.Email) (*d
 	}
 
 	model.Status = string(email.Status)
-	model.Recipients = strings.Join(email.Recipients, ";")
-	model.CC = strings.Join(email.Recipients, ";")
-	model.BCC = strings.Join(email.BCC, ";")
-	model.Sender = email.Sender
+	model.Recipients = addressToString(email.Recipients...)
+	model.CC = addressToString(email.CC...)
+	model.BCC = addressToString(email.BCC...)
+	model.Sender = email.Sender.String()
 	model.Subject = email.Subject
 	model.MimeType = email.MimeType.String()
 	model.Body = base64.StdEncoding.EncodeToString([]byte(email.Body))
@@ -169,20 +169,52 @@ func (storage *emailStorage) Update(ctx context.Context, email domain.Email) (*d
 	return emailFromModel(model), nil
 }
 
+func addressToString(addresses ...domain.Address) string {
+	n := len(addresses)
+	if n == 0 {
+		return ""
+	}
+
+	slice := make([]string, len(addresses))
+	for i, address := range addresses {
+		slice[i] = address.String()
+	}
+
+	return strings.Join(slice, AddressSeparator)
+}
+
+func stringToAddresses(str string) []domain.Address {
+	if str == "" {
+		return nil
+	}
+
+	slice := strings.Split(str, AddressSeparator)
+	addresses := make([]domain.Address, len(slice))
+
+	for i, addr := range slice {
+		if address, _ := domain.ParseAddress(addr); address != nil {
+			addresses[i] = *address
+		}
+	}
+
+	return addresses
+}
+
 func emailFromModel(model *mysql.Email) *domain.Email {
 	body, _ := base64.StdEncoding.DecodeString(model.Body)
+	sender, _ := domain.ParseAddress(model.Sender)
 
 	email := &domain.Email{
 		ID:         model.ID,
-		Recipients: strings.Split(model.Recipients, AddressSeparator),
-		CC:         strings.Split(model.CC, AddressSeparator),
-		BCC:        strings.Split(model.BCC, AddressSeparator),
-		Sender:     model.Sender,
+		Recipients: stringToAddresses(model.Recipients),
+		CC:         stringToAddresses(model.CC),
+		BCC:        stringToAddresses(model.BCC),
+		Sender:     *sender,
 		Subject:    model.Subject,
 		MimeType:   domain.MimeTypeAlias(model.MimeType),
 		Body:       string(body),
 		Status:     domain.EmailStatus(model.Status),
-		DTCreated:  model.DTCreated,
+		DTCreated:  model.DTCreated.In(time.Local),
 	}
 
 	if model.Error.Valid {

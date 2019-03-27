@@ -2,8 +2,8 @@ package sender
 
 import (
 	"github.com/partyzanex/esender/domain"
-	"github.com/pkg/errors"
 	"github.com/partyzanex/esender/sender/smtp"
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 )
 

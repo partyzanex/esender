@@ -1,8 +1,8 @@
 package domain
 
 import (
-	"time"
 	"context"
+	"time"
 )
 
 const (

@@ -7,10 +7,11 @@ import (
 	"os"
 
 	"github.com/labstack/echo"
-	"github.com/partyzanex/esender/http/server/handler"
-	"github.com/partyzanex/esender/storage"
-	"github.com/partyzanex/esender/sender"
+	"github.com/labstack/echo/middleware"
 	"github.com/partyzanex/esender/domain"
+	"github.com/partyzanex/esender/http/server/handler"
+	"github.com/partyzanex/esender/sender"
+	"github.com/partyzanex/esender/storage"
 )
 
 var (
@@ -61,11 +62,15 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: `${time_rfc3339} method="${method}" uri="${uri} status=${status} ` +
+			`latency=${latency} latency_human:"${latency_human}" error="${error}"` + "\n",
+	}))
 
-	e.GET("/emails", h.CreateEmail)
-	e.GET("/emails/:id", h.CreateEmail)
+	e.GET("/emails", h.SearchEmails)
+	e.GET("/emails/:id", h.GetEmail)
 	e.POST("/emails", h.CreateEmail)
-	e.PUT("/emails", h.CreateEmail)
+	e.PUT("/emails", h.UpdateEmail)
 	e.POST("/emails/send", h.SendEmail)
 
 	addr := config.GetString("http.host") + ":" + config.GetString("http.port")

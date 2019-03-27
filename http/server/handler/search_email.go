@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *Handler) SearchEmail(ctx echo.Context) error {
+func (h *Handler) SearchEmails(ctx echo.Context) error {
 	filter := &domain.Filter{
 		Status:    domain.EmailStatus(ctx.QueryParam("status")),
 		Sender:    ctx.QueryParam("sender"),

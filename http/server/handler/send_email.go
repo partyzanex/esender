@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/partyzanex/esender/domain"
@@ -34,14 +35,6 @@ func (h *Handler) SendEmail(ctx echo.Context) error {
 		return h.errorResponse(ctx, errors.Wrap(err, "creating email failed"))
 	}
 	defer func() {
-		result.Status = domain.StatusSent
-
-		if err != nil {
-			errStr := err.Error()
-			result.Error = &errStr
-			result.Status = domain.StatusError
-		}
-
 		var errS error
 
 		result, errS = h.Storage.Update(ctx.Request().Context(), *result)
@@ -56,11 +49,19 @@ func (h *Handler) SendEmail(ctx echo.Context) error {
 
 	err = sender.Send(*result)
 	if err != nil {
+		errStr := err.Error()
+		result.Error = &errStr
+		result.Status = domain.StatusError
+
 		return ctx.JSON(http.StatusInternalServerError, &Response{
 			Error: errors.Wrap(err, domain.SendEmailErr),
 			Data:  result,
 		})
 	}
+
+	DTSent := time.Now()
+	result.DTSent = &DTSent
+	result.Status = domain.StatusSent
 
 	return ctx.JSON(h.getStatusCode(err), &Response{
 		Error: err,
