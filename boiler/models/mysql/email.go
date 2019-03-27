@@ -24,7 +24,7 @@ import (
 
 // Email is an object representing the database table.
 type Email struct {
-	ID         int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	ID         int64       `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Recipients string      `boil:"recipients" json:"recipients" toml:"recipients" yaml:"recipients"`
 	CC         string      `boil:"cc" json:"cc" toml:"cc" yaml:"cc"`
 	BCC        string      `boil:"bcc" json:"bcc" toml:"bcc" yaml:"bcc"`
@@ -74,14 +74,14 @@ var EmailColumns = struct {
 
 // Generated where
 
-type whereHelperint struct{ field string }
+type whereHelperint64 struct{ field string }
 
-func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 type whereHelperstring struct{ field string }
 
@@ -160,7 +160,7 @@ func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
 }
 
 var EmailWhere = struct {
-	ID         whereHelperint
+	ID         whereHelperint64
 	Recipients whereHelperstring
 	CC         whereHelperstring
 	BCC        whereHelperstring
@@ -174,7 +174,7 @@ var EmailWhere = struct {
 	DTUpdated  whereHelpernull_Time
 	DTSent     whereHelpernull_Time
 }{
-	ID:         whereHelperint{field: `id`},
+	ID:         whereHelperint64{field: `id`},
 	Recipients: whereHelperstring{field: `recipients`},
 	CC:         whereHelperstring{field: `cc`},
 	BCC:        whereHelperstring{field: `bcc`},
@@ -495,7 +495,7 @@ func Emails(mods ...qm.QueryMod) emailQuery {
 
 // FindEmail retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindEmail(ctx context.Context, exec boil.ContextExecutor, iD int, selectCols ...string) (*Email, error) {
+func FindEmail(ctx context.Context, exec boil.ContextExecutor, iD int64, selectCols ...string) (*Email, error) {
 	emailObj := &Email{}
 
 	sel := "*"
@@ -596,7 +596,7 @@ func (o *Email) Insert(ctx context.Context, exec boil.ContextExecutor, columns b
 		return ErrSyncFail
 	}
 
-	o.ID = int(lastID)
+	o.ID = int64(lastID)
 	if lastID != 0 && len(cache.retMapping) == 1 && cache.retMapping[0] == emailMapping["ID"] {
 		goto CacheNoHooks
 	}
@@ -870,7 +870,7 @@ func (o *Email) Upsert(ctx context.Context, exec boil.ContextExecutor, updateCol
 		return ErrSyncFail
 	}
 
-	o.ID = int(lastID)
+	o.ID = int64(lastID)
 	if lastID != 0 && len(cache.retMapping) == 1 && cache.retMapping[0] == emailMapping["id"] {
 		goto CacheNoHooks
 	}
@@ -1053,7 +1053,7 @@ func (o *EmailSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) e
 }
 
 // EmailExists checks if the Email row exists.
-func EmailExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
+func EmailExists(ctx context.Context, exec boil.ContextExecutor, iD int64) (bool, error) {
 	var exists bool
 	sql := "select exists(select 1 from `email` where `id`=? limit 1)"
 

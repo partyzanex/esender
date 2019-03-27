@@ -568,7 +568,7 @@ func testEmailsSelect(t *testing.T) {
 }
 
 var (
-	emailDBTypes = map[string]string{`ID`: `int`, `Recipients`: `text`, `CC`: `text`, `BCC`: `text`, `Sender`: `varchar`, `Subject`: `varchar`, `MimeType`: `enum('html','text')`, `Body`: `longtext`, `Status`: `enum('created','sent','error')`, `Error`: `varchar`, `DTCreated`: `datetime`, `DTUpdated`: `datetime`, `DTSent`: `datetime`}
+	emailDBTypes = map[string]string{`ID`: `bigint`, `Recipients`: `text`, `CC`: `text`, `BCC`: `text`, `Sender`: `varchar`, `Subject`: `varchar`, `MimeType`: `enum('html','text')`, `Body`: `longtext`, `Status`: `enum('created','sent','error')`, `Error`: `varchar`, `DTCreated`: `datetime`, `DTUpdated`: `datetime`, `DTSent`: `datetime`}
 	_            = bytes.MinRead
 )
 

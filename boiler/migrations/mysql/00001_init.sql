@@ -2,7 +2,7 @@
 -- SQL in this section is executed when the migration is applied.
 
 CREATE TABLE `email` (
-  `id`         INT(11)                           NOT NULL AUTO_INCREMENT,
+  `id`         BIGINT(20)                        NOT NULL AUTO_INCREMENT,
   `recipients` TEXT                              NOT NULL,
   `cc`         TEXT                              NOT NULL,
   `bcc`        TEXT                              NOT NULL,
