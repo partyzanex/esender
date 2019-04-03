@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"log"
 	"os"
 
@@ -12,6 +10,8 @@ import (
 	"github.com/partyzanex/esender/http/server/handler"
 	"github.com/partyzanex/esender/sender"
 	"github.com/partyzanex/esender/storage"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 var (

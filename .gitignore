@@ -2,3 +2,4 @@
 .idea
 sqlboiler.toml
 config.yaml
+.env

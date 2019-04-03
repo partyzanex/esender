@@ -1,0 +1,27 @@
+version: "3.3"
+services:
+  esender:
+    env_file: ./.env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        MYSQL_DATABASE: ${MYSQL_DATABASE}
+    restart: always
+    ports:
+      - 9000:9000
+    depends_on:
+      - mysql
+    links:
+      - mysql
+  mysql:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql:/var/lib/mysql
+volumes:
+  mysql:
