@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package pb;
+
+service Email {
+    rpc Create (Message) returns (Message) {
+    }
+    rpc Update (Message) returns (Message) {
+    }
+    rpc Get (Message) returns (Message) {
+    }
+    rpc Search (SearchRequest) returns (SearchResponse) {
+    }
+    rpc Send (Message) returns (SendResult) {
+    }
+}
+
+message Message {
+    int64 ID = 1;
+    repeated Address Recipients = 2;
+    repeated Address CC = 3;
+    repeated Address BCC = 4;
+    Address Sender = 5;
+    string Subject = 6;
+    string Body = 7;
+    MimeType MimeType = 8;
+    EmailStatus Status = 9;
+    string Error = 10;
+    int64 DTCreated = 11;
+    int64 DTUpdated = 12;
+    int64 DTSent = 13;
+}
+
+message SearchRequest {
+    string Recipient = 1;
+    string Sender = 2;
+    EmailStatus Status = 3;
+    int64 Since = 4;
+    int64 Till = 5;
+    int64 Limit = 6;
+    int64 Offset = 7;
+}
+
+message SearchResponse {
+    repeated Message Emails = 1;
+}
+
+message Address {
+    string Name = 1;
+    string Address = 2;
+}
+
+enum MimeType {
+    text = 0;
+    html = 1;
+}
+
+enum EmailStatus {
+    created = 0;
+    sent = 1;
+    error = 2;
+}
+
+message SendResult {
+    bool Success = 1;
+}

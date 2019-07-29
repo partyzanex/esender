@@ -47,7 +47,7 @@ func (h *Handler) SendEmail(ctx echo.Context) error {
 		}
 	}()
 
-	err = sender.Send(*result)
+	_, err = sender.Send(*result)
 	if err != nil {
 		errStr := err.Error()
 		result.Error = &errStr

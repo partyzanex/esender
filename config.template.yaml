@@ -1,12 +1,15 @@
 http:
-  host: "{{http.host}}"
-  port: {{http.port}}
-  auth_key: "{{http.auth_key}}"
+  host: "localhost"
+  port: 3030
+  auth_key: ""
+grpc:
+  host: "localhost"
+  port: 3040
 sentry:
-  dsn: "{{sentry.dsn}}"
+  dsn: ""
 storage:
-  name: ""
-  dsn: "{{mysql.dsn}}"
+  name: "mysql"
+  dsn: "root:pass@tcp(127.0.0.1:3306)/dbname?parseTime=true"
 senders:
   - name: "" # ex. smtp
     host: ""

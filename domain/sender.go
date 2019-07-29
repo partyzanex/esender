@@ -1,7 +1,7 @@
 package domain
 
 type EmailSender interface {
-	Send(email Email) error
+	Send(email Email) (bool, error)
 	Name() string
 
 	AgentConfig() AgentConfig
@@ -34,7 +34,7 @@ func (senders *Senders) Get(name string) (EmailSender, bool) {
 		sender = senders.def
 	}
 
-	return sender, ok
+	return sender, true
 }
 
 func (senders *Senders) All() []EmailSender {

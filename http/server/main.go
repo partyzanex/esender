@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -15,7 +16,8 @@ import (
 )
 
 var (
-	configPath = pflag.String("config", "config.yaml", "Configuration file path")
+	configPath   = pflag.String("config", "config.yaml", "Configuration file path")
+	connLifetime = pflag.Duration("conn_lifetime", time.Second, "postgres connection lifetime")
 )
 
 func main() {
@@ -37,8 +39,9 @@ func main() {
 	}
 
 	store, err := storage.Create(storage.Config{
-		Name: config.GetString("storage.name"),
-		DSN:  config.GetString("storage.dsn"),
+		Name:         config.GetString("storage.name"),
+		DSN:          config.GetString("storage.dsn"),
+		ConnLifetime: *connLifetime,
 	})
 	if err != nil {
 		log.Fatalf("creating storage failed: %s", err)

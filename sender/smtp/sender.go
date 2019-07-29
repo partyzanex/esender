@@ -32,9 +32,9 @@ func (Sender) Name() string {
 	return "smtp"
 }
 
-func (sender *Sender) Send(email domain.Email) error {
+func (sender *Sender) Send(email domain.Email) (bool, error) {
 	if err := email.Validate(); err != nil {
-		return errors.Wrap(err, domain.EmailValidationErr)
+		return false, errors.Wrap(err, domain.EmailValidationErr)
 	}
 
 	auth := smtp.PlainAuth("", sender.config.UserName, sender.config.Password, sender.config.Host)
@@ -47,17 +47,17 @@ func (sender *Sender) Send(email domain.Email) error {
 
 	conn, err := tls.Dial("tcp", sender.config.Address(), tlsConfig)
 	if err != nil {
-		return errors.Wrap(err, "dial connection error")
+		return false, errors.Wrap(err, "dial connection error")
 	}
 
 	client, err := smtp.NewClient(conn, sender.config.Host)
 	if err != nil {
-		return errors.Wrap(err, "creating client failed")
+		return false, errors.Wrap(err, "creating client failed")
 	}
 	defer client.Quit()
 
 	if err = client.Auth(auth); err != nil {
-		return errors.Wrap(err, "auth failed")
+		return false, errors.Wrap(err, "auth failed")
 	}
 
 	for _, to := range email.Recipients {
@@ -75,32 +75,32 @@ func (sender *Sender) Send(email domain.Email) error {
 		message += "\r\n" + email.Body
 
 		if err = client.Mail(email.Sender.Address); err != nil {
-			return errors.Wrap(err, "set sender failed")
+			return false, errors.Wrap(err, "set sender failed")
 		}
 
 		if err = client.Rcpt(to.Address); err != nil {
-			return errors.Wrap(err, "set recipient failed")
+			return false, errors.Wrap(err, "set recipient failed")
 		}
 
 		writer, err := client.Data()
 		if err != nil {
-			return errors.Wrap(err, "getting writer failed")
+			return false, errors.Wrap(err, "getting writer failed")
 		}
 
 		_, err = writer.Write([]byte(message))
 		if err != nil {
-			return errors.Wrap(err, "write message failed")
+			return false, errors.Wrap(err, "write message failed")
 		}
 
 		err = writer.Close()
 		if err != nil {
-			return errors.Wrap(err, "closing writer failed")
+			return false, errors.Wrap(err, "closing writer failed")
 		}
 
 		client.Reset()
 	}
 
-	return nil
+	return true, nil
 }
 
 func (sender *Sender) AgentConfig() domain.AgentConfig {

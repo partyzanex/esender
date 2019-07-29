@@ -1,8 +1,10 @@
 # Esender
 
-HTTP (REST) and GRPC microservices for sending emails written on Go.
+HTTP (REST API based on [echo](https://github.com/labstack/echo)) and GRPC microservice (based on [go-kit](https://github.com/go-kit/kit)) for sending emails.
 
-# Migrations
+## Migrations
+
+migration tool - [goose](https://github.com/pressly/goose)
 
 ```bash
 # up
