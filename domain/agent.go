@@ -17,16 +17,16 @@ type AgentConfig struct {
 }
 
 type agent struct {
-	storage EmailStorage
-	sender  EmailSender
+	EmailStorage
+	EmailSender
 
 	interval *time.Ticker
 }
 
 func (agent *agent) Process() error {
-	agentConfig := agent.sender.AgentConfig()
+	agentConfig := agent.AgentConfig()
 
-	emails, err := agent.storage.Search(context.Background(), &Filter{
+	emails, err := agent.Search(context.Background(), &Filter{
 		Status: agentConfig.Status,
 		Limit:  agentConfig.Limit,
 	})
@@ -35,7 +35,7 @@ func (agent *agent) Process() error {
 	}
 
 	for _, email := range emails {
-		err := agent.sender.Send(*email)
+		_, err := agent.Send(*email)
 		if err != nil {
 			agent.log(errors.Wrap(err, "sending email failed"))
 			email.Status = StatusError
@@ -47,7 +47,7 @@ func (agent *agent) Process() error {
 			email.Status = StatusSent
 		}
 
-		_, err = agent.storage.Update(context.Background(), *email)
+		_, err = agent.Update(context.Background(), *email)
 		if err != nil {
 			agent.log(errors.Wrap(err, "updating email failed"))
 		}
@@ -76,8 +76,8 @@ func (agent) log(err error) {
 
 func NewAgent(storage EmailStorage, sender EmailSender) *agent {
 	return &agent{
-		storage:  storage,
-		sender:   sender,
-		interval: time.NewTicker(sender.AgentConfig().Interval),
+		EmailStorage: storage,
+		EmailSender:  sender,
+		interval:     time.NewTicker(sender.AgentConfig().Interval),
 	}
 }

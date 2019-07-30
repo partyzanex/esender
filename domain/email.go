@@ -9,6 +9,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
 	"log"
+	"github.com/davecgh/go-spew/spew"
 )
 
 const (
@@ -145,4 +146,13 @@ func (email *Email) Validate() error {
 	}
 
 	return nil
+}
+
+func (email *Email) Failed() error {
+	return errors.New("email failed: " + spew.Sdump(email))
+}
+
+type EmailService interface {
+	EmailStorage
+	EmailSender
 }

@@ -12,8 +12,9 @@ import (
 )
 
 type Config struct {
-	Name string
-	DSN  string
+	Name         string
+	DSN          string
+	ConnLifetime time.Duration
 }
 
 func Create(config Config) (domain.EmailStorage, error) {
@@ -23,7 +24,9 @@ func Create(config Config) (domain.EmailStorage, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "opening sql connection failed")
 		}
-		db.SetConnMaxLifetime(time.Second)
+		if config.ConnLifetime > 0 {
+			db.SetConnMaxLifetime(config.ConnLifetime)
+		}
 
 		return mysql.EmailStorage(db), nil
 	default:
